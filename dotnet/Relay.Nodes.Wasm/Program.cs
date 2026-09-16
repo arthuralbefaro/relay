@@ -1,0 +1,1 @@
+Console.WriteLine("Relay: runtime .NET carregado no navegador");

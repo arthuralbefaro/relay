@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+dist/
+bin/
+obj/
+.vs/
+*.user
+next-env.d.ts
+apps/web/public/dotnet/_framework/

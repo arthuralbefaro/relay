@@ -1,0 +1,10 @@
+:root { color-scheme: dark; --bg: #0b0d12; --fg: #e6e8ee; --muted: #8a90a0; --accent: #6d8bff; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
+input, button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid #2a2f3a; background: #141821; color: var(--fg); }
+button { cursor: pointer; background: var(--accent); border-color: var(--accent); color: #fff; }
+button.secondary { background: transparent; color: var(--fg); }
+pre { background: #141821; padding: 16px; border-radius: 8px; overflow-x: auto; }
+.muted { color: var(--muted); font-size: 14px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }

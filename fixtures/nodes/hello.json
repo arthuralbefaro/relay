@@ -1,0 +1,26 @@
+[
+  {
+    "nome": "cumprimenta pelo nome",
+    "node": "hello",
+    "input": { "name": "Arthur" },
+    "expected": { "ok": true, "output": { "message": "Olá, Arthur!" } }
+  },
+  {
+    "nome": "remove espaços do nome",
+    "node": "hello",
+    "input": { "name": "  Allan  " },
+    "expected": { "ok": true, "output": { "message": "Olá, Allan!" } }
+  },
+  {
+    "nome": "nome ausente vira erro de entrada",
+    "node": "hello",
+    "input": {},
+    "expected": { "ok": false, "error": { "code": "entrada_invalida", "message": "o campo 'name' é obrigatório e deve ser texto" } }
+  },
+  {
+    "nome": "nó inexistente",
+    "node": "nao-existe",
+    "input": {},
+    "expected": { "ok": false, "error": { "code": "node_desconhecido", "message": "nó 'nao-existe' não existe" } }
+  }
+]

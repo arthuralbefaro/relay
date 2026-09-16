@@ -1,0 +1,11 @@
+{
+  "name": "relay",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "dotnet": "pnpm --filter web dotnet",
+    "build": "pnpm --filter web build",
+    "test:dotnet": "dotnet test dotnet/Relay.Nodes.Tests"
+  },
+  "packageManager": "pnpm@11.21.0"
+}
