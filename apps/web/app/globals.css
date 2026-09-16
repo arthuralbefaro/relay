@@ -4,7 +4,23 @@ body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system
 main { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
 input, button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid #2a2f3a; background: #141821; color: var(--fg); }
 button { cursor: pointer; background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .6; cursor: default; }
 button.secondary { background: transparent; color: var(--fg); }
 pre { background: #141821; padding: 16px; border-radius: 8px; overflow-x: auto; }
+code { background: #141821; padding: 1px 6px; border-radius: 4px; font-size: 14px; }
 .muted { color: var(--muted); font-size: 14px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.steps { list-style: none; padding: 0; display: grid; gap: 12px; }
+.step { background: #11141b; border: 1px solid #222734; border-radius: 10px; padding: 12px 14px; }
+.step-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.step pre { margin: 8px 0 0; }
+.attempts { margin: 8px 0 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
+
+.status { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; }
+.status-sucesso { background: #12351f; color: #6ee7a0; }
+.status-falhou { background: #3a1518; color: #ff8a8f; }
+.status-pulado { background: #2a2d36; color: #b3b8c4; }
+.status-invalida { background: #3a2c10; color: #f5c16c; }
+
+details summary { cursor: pointer; color: var(--muted); margin-top: 16px; }

@@ -5,7 +5,9 @@
     "dev": "pnpm --filter web dev",
     "dotnet": "pnpm --filter web dotnet",
     "build": "pnpm --filter web build",
-    "test:dotnet": "dotnet test dotnet/Relay.Nodes.Tests"
+    "test": "pnpm -r --if-present run test",
+    "test:dotnet": "dotnet test dotnet/Relay.Nodes.Tests",
+    "typecheck": "pnpm -r --if-present run typecheck"
   },
   "packageManager": "pnpm@11.21.0"
 }

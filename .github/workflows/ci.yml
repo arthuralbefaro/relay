@@ -14,7 +14,7 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet test dotnet/Relay.Nodes.Tests
 
-  web:
+  node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,5 +27,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web build
-      - run: pnpm --filter web typecheck
+      # o build publica o WASM em dist/wasm, que o teste de contrato carrega
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm typecheck

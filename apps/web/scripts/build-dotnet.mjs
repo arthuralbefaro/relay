@@ -14,7 +14,6 @@ execSync(`dotnet publish "${project}" -c Release -o "${out}"`, { stdio: 'inherit
 
 const framework = join(out, 'wwwroot', '_framework');
 if (!existsSync(join(framework, 'dotnet.js'))) {
-  // Falha alto: o layout do publish muda entre versões do SDK.
   console.error(`dotnet.js não encontrado em ${framework}`);
   console.error('conteúdo de dist/wasm:', readdirSync(out, { recursive: true }).slice(0, 40));
   process.exit(1);
