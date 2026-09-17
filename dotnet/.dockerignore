@@ -1,0 +1,5 @@
+**/bin
+**/obj
+**/.vs
+Relay.Nodes.Wasm/
+Relay.Nodes.Tests/

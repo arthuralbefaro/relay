@@ -13,6 +13,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test dotnet/Relay.Nodes.Tests
+      - run: dotnet build dotnet/Relay.NodeHost -c Release
 
   node:
     runs-on: ubuntu-latest
@@ -27,7 +28,48 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # o build publica o WASM em dist/wasm, que o teste de contrato carrega
       - run: pnpm build
       - run: pnpm test
       - run: pnpm typecheck
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: relay
+          POSTGRES_PASSWORD: relay
+          POSTGRES_DB: relay
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U relay -d relay"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://relay:relay@localhost:5433/relay
+      NODE_HOST_URL: http://localhost:5080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: dotnet build dotnet/Relay.NodeHost -c Release
+      - name: sobe o node-host
+        run: |
+          nohup dotnet run --project dotnet/Relay.NodeHost -c Release --no-build > node-host.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:5080/health; then exit 0; fi
+            sleep 1
+          done
+          cat node-host.log
+          exit 1
+      - run: pnpm test:integration

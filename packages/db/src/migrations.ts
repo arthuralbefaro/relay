@@ -3,7 +3,6 @@ export interface Migration {
   sql: string;
 }
 
-// Fonte de verdade do DDL. Nunca edite uma migration já publicada: crie a próxima.
 export const MIGRATIONS: readonly Migration[] = [
   {
     id: '0001_flows_e_execucoes',
@@ -42,17 +41,30 @@ export interface MigrationClient extends MigrationTx {
   transaction<T>(fn: (tx: MigrationTx) => Promise<T>): Promise<T>;
 }
 
-export async function migrate(client: MigrationClient): Promise<string[]> {
-  await client.exec('create table if not exists _relay_migrations (id text primary key, applied_at bigint not null)');
+async function appliedIds(client: MigrationTx): Promise<Set<string>> {
   const { rows } = await client.query('select id from _relay_migrations');
   const applied = new Set((rows as { id: string }[]).map((r) => r.id));
 
-  // Banco mais novo que o código não pode seguir calado: as queries quebrariam depois, longe da causa.
   const known = new Set(MIGRATIONS.map((m) => m.id));
   const unknown = [...applied].filter((id) => !known.has(id));
   if (unknown.length > 0) {
     throw new Error(`o banco tem migrations que este código não conhece: ${unknown.join(', ')}`);
   }
+  return applied;
+}
+
+export async function pendingMigrations(client: MigrationTx): Promise<string[]> {
+  const { rows } = await client.query("select to_regclass('_relay_migrations') is not null as existe");
+  const exists = (rows[0] as { existe?: boolean } | undefined)?.existe === true;
+  if (!exists) return MIGRATIONS.map((m) => m.id);
+
+  const applied = await appliedIds(client);
+  return MIGRATIONS.filter((m) => !applied.has(m.id)).map((m) => m.id);
+}
+
+export async function migrate(client: MigrationClient): Promise<string[]> {
+  await client.exec('create table if not exists _relay_migrations (id text primary key, applied_at bigint not null)');
+  const applied = await appliedIds(client);
 
   const done: string[] = [];
   for (const migration of MIGRATIONS) {

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Relay.NodeHost/Relay.NodeHost.csproj" />
   <Project Path="Relay.Nodes.Tests/Relay.Nodes.Tests.csproj" />
   <Project Path="Relay.Nodes.Wasm/Relay.Nodes.Wasm.csproj" />
   <Project Path="Relay.Nodes/Relay.Nodes.csproj" />

@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import type { Execution, FlowDefinition } from '@relay/engine';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { MIGRATIONS, createRepository, migrate, pgliteQuery, type Repository } from '../src/index';
+import { MIGRATIONS, createRepository, migrate, pendingMigrations, pgliteQuery, type Repository } from '../src/index';
 
 const definition: FlowDefinition = {
   id: 'f1',
@@ -54,6 +54,17 @@ describe('migrations', () => {
     expect(rows[0]?.total).toBe(MIGRATIONS.length);
   });
 
+  it('pendingMigrations lista tudo num banco novo e nada depois de migrar', async () => {
+    const fresh = await PGlite.create();
+    try {
+      expect(await pendingMigrations(fresh)).toEqual(MIGRATIONS.map((m) => m.id));
+      await migrate(fresh);
+      expect(await pendingMigrations(fresh)).toEqual([]);
+    } finally {
+      await fresh.close();
+    }
+  });
+
   it('recusam banco com migration que o código não conhece', async () => {
     await client.query('insert into _relay_migrations (id, applied_at) values ($1, $2)', ['9999_do_futuro', 1]);
     await expect(migrate(client)).rejects.toThrow('9999_do_futuro');
@@ -95,6 +106,21 @@ describe('execuções', () => {
       await repo.saveExecution({ id: `e${t}`, flowId: 'f1', trigger: {}, definition, execution: execution(t) });
     }
     expect((await repo.listExecutions('f1', 2)).map((e) => e.id)).toEqual(['e300', 'e200']);
+  });
+
+  it('gravar a mesma execução duas vezes mantém a primeira', async () => {
+    await repo.saveFlow(flow);
+    await repo.saveExecution({ id: 'e1', flowId: 'f1', trigger: {}, definition, execution: execution(1) });
+    await repo.saveExecution({
+      id: 'e1',
+      flowId: 'f1',
+      trigger: {},
+      definition,
+      execution: { ...execution(2), status: 'sucesso' },
+    });
+    const saved = await repo.getExecution('e1');
+    expect(saved?.status).toBe('falhou');
+    expect(saved?.startedAt).toBe(1);
   });
 
   it('lê a execução completa com a cópia da definição', async () => {

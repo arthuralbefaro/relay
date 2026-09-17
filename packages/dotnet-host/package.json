@@ -7,8 +7,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+  "test": "vitest run --dir test",
+  "test:integration": "vitest run --dir integration",
+  "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@relay/engine": "workspace:*"

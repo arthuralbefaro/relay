@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./pg": "./src/pg.ts"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --dir test",
+    "test:integration": "vitest run --dir integration",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -16,6 +18,9 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^22.20.2",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }

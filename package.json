@@ -2,12 +2,17 @@
   "name": "relay",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "dotnet": "pnpm --filter web dotnet",
-    "build": "pnpm --filter web build",
-    "test": "pnpm -r --if-present run test",
-    "test:dotnet": "dotnet test dotnet/Relay.Nodes.Tests",
-    "typecheck": "pnpm -r --if-present run typecheck"
+  "dev": "pnpm --filter web dev",
+  "dotnet": "pnpm --filter web dotnet",
+  "build": "pnpm --filter web build",
+  "test": "pnpm -r --if-present run test",
+  "test:dotnet": "dotnet test dotnet/Relay.Nodes.Tests",
+  "test:integration": "pnpm -r --if-present run test:integration",
+  "typecheck": "pnpm -r --if-present run typecheck",
+  "infra": "docker compose up -d --build",
+  "migrate": "pnpm --filter @relay/api migrate",
+  "api": "pnpm --filter @relay/api dev",
+  "worker": "pnpm --filter @relay/worker dev"
   },
   "packageManager": "pnpm@11.21.0"
 }

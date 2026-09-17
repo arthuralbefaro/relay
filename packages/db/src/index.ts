@@ -1,4 +1,11 @@
-export { MIGRATIONS, migrate, type Migration, type MigrationClient, type MigrationTx } from './migrations';
+export {
+  MIGRATIONS,
+  migrate,
+  pendingMigrations,
+  type Migration,
+  type MigrationClient,
+  type MigrationTx,
+} from './migrations';
 export {
   createRepository,
   pgliteQuery,

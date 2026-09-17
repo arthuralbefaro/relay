@@ -99,7 +99,8 @@ export function createRepository(query: QueryFn, now: () => number = () => Date.
         definition,
         steps: execution.steps,
         issues: execution.issues,
-      });
+      })
+      .onConflictDoNothing({ target: executions.id });
     },
 
     async listExecutions(flowId: string, limit = 20): Promise<ExecutionSummary[]> {
