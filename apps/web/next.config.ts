@@ -6,7 +6,7 @@ const config: NextConfig = {
   output: 'export',
   basePath,
   images: { unoptimized: true },
-  transpilePackages: ['@relay/engine', '@relay/dotnet-host'],
+  transpilePackages: ['@relay/engine', '@relay/dotnet-host', '@relay/db'],
 };
 
 export default config;

@@ -8,3 +8,4 @@ obj/
 *.user
 next-env.d.ts
 apps/web/public/dotnet/_framework/
+apps/web/public/pglite/

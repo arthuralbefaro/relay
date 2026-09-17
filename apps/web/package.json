@@ -4,13 +4,17 @@
   "type": "module",
   "scripts": {
     "dotnet": "node scripts/build-dotnet.mjs",
-    "dev": "next dev",
-    "build": "node scripts/build-dotnet.mjs && next build",
+    "pglite": "node scripts/copy-pglite.mjs",
+    "dev": "node scripts/copy-pglite.mjs && next dev",
+    "build": "node scripts/build-dotnet.mjs && node scripts/copy-pglite.mjs && next build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@relay/db": "workspace:*",
     "@relay/dotnet-host": "workspace:*",
     "@relay/engine": "workspace:*",
+    "@xyflow/react": "^12.11.6",
     "next": "^16.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
