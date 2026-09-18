@@ -1,3 +1,19 @@
+name: relay
+
+x-node-service: &node-service
+  build:
+    context: .
+    dockerfile: docker/node.Dockerfile
+  environment:
+    DATABASE_URL: postgres://relay:relay@postgres:5432/relay
+    REDIS_URL: redis://redis:6379
+    NODE_HOST_URL: http://node-host:8080
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
 services:
   postgres:
     image: postgres:17
@@ -26,6 +42,36 @@ services:
       dockerfile: Relay.NodeHost/Dockerfile
     ports:
       - "5080:8080"
+
+  migrate:
+    <<: *node-service
+    profiles: ["tools"]
+    command: ["pnpm", "--filter", "@relay/api", "migrate"]
+
+  api:
+    <<: *node-service
+    profiles: ["full"]
+    command: ["pnpm", "--filter", "@relay/api", "start"]
+    environment:
+      DATABASE_URL: postgres://relay:relay@postgres:5432/relay
+      REDIS_URL: redis://redis:6379
+      NODE_HOST_URL: http://node-host:8080
+      API_PORT: 3001
+      API_CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+
+  worker:
+    <<: *node-service
+    profiles: ["full"]
+    command: ["pnpm", "--filter", "@relay/worker", "start"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      node-host:
+        condition: service_started
 
 volumes:
   pgdata: {}

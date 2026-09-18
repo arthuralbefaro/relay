@@ -1,0 +1,12 @@
+.git
+node_modules
+**/node_modules
+.next
+out
+dist
+**/bin
+**/obj
+**/.vs
+apps/web/public/dotnet
+apps/web/public/pglite
+.env

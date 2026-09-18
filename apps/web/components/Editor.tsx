@@ -1,7 +1,6 @@
 'use client';
 
-import type { ExecutionSummary, Repository } from '@relay/db';
-import { runFlow, validateFlow, type Execution, type StepStatus, type ValidationIssue } from '@relay/engine';
+import { validateFlow, type StepStatus, type ValidationIssue } from '@relay/engine';
 import {
   Background,
   Controls,
@@ -13,11 +12,12 @@ import {
   type Edge,
 } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { loadDatabase } from '@/lib/db';
+import { apiUrl, type ExecutionRecord, type ExecutionSummary, type FlowBackend } from '@/lib/backend';
+import { createBrowserBackend } from '@/lib/backend-browser';
+import { createServerBackend } from '@/lib/backend-server';
 import { FLOW_ID, defaultFlow } from '@/lib/default-flow';
-import { dotnetExecutor, loadDotnet } from '@/lib/dotnet';
 import { nextNodeId, toCanvas, toDefinition, type RelayNode, type RelayNodeData } from '@/lib/flow-mapping';
-import { NODE_CATALOG, createTsExecutor, getSpec } from '@/lib/node-catalog';
+import { NODE_CATALOG, getSpec } from '@/lib/node-catalog';
 import { stableStringify } from '@/lib/stable-json';
 import { CanvasOverlayContext } from './canvas-context';
 import { ExecutionLog } from './ExecutionLog';
@@ -27,14 +27,19 @@ import RelayNodeView from './RelayNodeView';
 const nodeTypes = { relay: RelayNodeView };
 const RUNTIMES = ['ts', 'dotnet'] as const;
 
-type LoadState = { status: 'carregando' } | { status: 'pronto'; repo: Repository } | { status: 'erro'; message: string };
+type LoadState =
+  | { status: 'carregando' }
+  | { status: 'pronto'; backend: FlowBackend }
+  | { status: 'erro'; message: string };
+
 type SaveState =
   | { status: 'ocioso' }
   | { status: 'salvando' }
   | { status: 'salvo'; at: number }
   | { status: 'erro'; message: string };
+
 type TriggerState = { ok: true; value: Record<string, unknown> } | { ok: false; message: string };
-type Shown = { execution: Execution; definitionKey: string };
+type Shown = ExecutionRecord & { definitionKey: string };
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR');
@@ -48,7 +53,7 @@ export function Editor() {
   const [triggerText, setTriggerText] = useState('{\n  "nome": "Arthur"\n}');
   const [save, setSave] = useState<SaveState>({ status: 'ocioso' });
   const [running, setRunning] = useState(false);
-  const [runtimeNote, setRuntimeNote] = useState<string | null>(null);
+  const [runNote, setRunNote] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [history, setHistory] = useState<ExecutionSummary[]>([]);
   const [shown, setShown] = useState<Shown | null>(null);
@@ -58,28 +63,23 @@ export function Editor() {
   const saveKey = useMemo(() => stableStringify(current), [current]);
   const definitionKey = useMemo(() => stableStringify(current.definition), [current]);
 
-  // Abre o banco e carrega o fluxo (ou cria o de exemplo na primeira visita).
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const repo = await loadDatabase();
-        let saved = await repo.getFlow(FLOW_ID);
-        if (!saved) {
-          await repo.saveFlow({ id: FLOW_ID, name: defaultFlow.definition.name, ...defaultFlow });
-          saved = await repo.getFlow(FLOW_ID);
-        }
-        if (!saved) throw new Error('o fluxo de exemplo foi salvo, mas não voltou na leitura');
-        const executions = await repo.listExecutions(FLOW_ID);
+        const url = apiUrl();
+        const backend = url ? createServerBackend({ baseUrl: url }) : await createBrowserBackend();
+        const state = await backend.load();
+        const executions = await backend.listExecutions();
         if (cancelled) return;
 
-        const canvas = toCanvas(saved.definition, saved.layout);
-        lastSaved.current = stableStringify(toDefinition(FLOW_ID, saved.name, canvas.nodes, canvas.edges));
+        const canvas = toCanvas(state.definition, state.layout);
+        lastSaved.current = stableStringify(toDefinition(FLOW_ID, state.name, canvas.nodes, canvas.edges));
         setNodes(canvas.nodes);
         setEdges(canvas.edges);
-        setFlowName(saved.name);
+        setFlowName(state.name);
         setHistory(executions);
-        setLoad({ status: 'pronto', repo });
+        setLoad({ status: 'pronto', backend });
       } catch (e) {
         if (!cancelled) setLoad({ status: 'erro', message: errorMessage(e) });
       }
@@ -89,19 +89,18 @@ export function Editor() {
     };
   }, [setNodes, setEdges]);
 
-  // Autosave com debounce. Seleção e medição de nós mudam o array, mas não a chave, então não geram escrita.
   useEffect(() => {
     if (load.status !== 'pronto') return;
     if (saveKey === lastSaved.current) {
       setSave((s) => (s.status === 'salvando' ? { status: 'ocioso' } : s));
       return;
     }
-    const { repo } = load;
+    const { backend } = load;
     const { definition, layout } = current;
     setSave({ status: 'salvando' });
     const timer = setTimeout(() => {
-      repo
-        .saveFlow({ id: FLOW_ID, name: definition.name, definition, layout })
+      backend
+        .save({ name: definition.name, definition, layout })
         .then(() => {
           lastSaved.current = saveKey;
           setSave({ status: 'salvo', at: Date.now() });
@@ -111,7 +110,6 @@ export function Editor() {
     return () => clearTimeout(timer);
   }, [load, saveKey, current]);
 
-  // Mesma validação do engine, somada ao que só a interface sabe: tipos fora do catálogo.
   const issues = useMemo<ValidationIssue[]>(() => {
     const unknownTypes = current.definition.nodes
       .filter((n) => !getSpec(n.type))
@@ -143,7 +141,7 @@ export function Editor() {
 
   const runBlocker =
     load.status !== 'pronto'
-      ? 'aguardando o banco local'
+      ? 'aguardando a conexão'
       : draftError
         ? `configuração com JSON inválido em ${draftError}`
         : !trigger.ok
@@ -196,31 +194,19 @@ export function Editor() {
 
   async function execute() {
     if (load.status !== 'pronto' || !trigger.ok || runBlocker) return;
-    const { repo } = load;
-    const definition = current.definition;
-    const triggerValue = trigger.value;
+    const { backend } = load;
+    const { definition, layout } = current;
     setRunning(true);
     setRunError(null);
     try {
-      // Lazy loading: o runtime .NET só é baixado se o fluxo tiver nó C#.
-      if (definition.nodes.some((n) => n.runtime === 'dotnet')) {
-        const t0 = performance.now();
-        const dotnet = await loadDotnet();
-        const ms = Math.round(performance.now() - t0);
-        setRuntimeNote((note) => note ?? `runtime .NET carregado em ${ms} ms · ${dotnet.RuntimeInfo()}`);
-      }
-
-      const execution = await runFlow(definition, triggerValue, {
-        executors: { ts: createTsExecutor(), dotnet: dotnetExecutor },
-      });
-      setShown({ execution, definitionKey: stableStringify(definition) });
-
-      try {
-        await repo.saveExecution({ id: crypto.randomUUID(), flowId: FLOW_ID, trigger: triggerValue, definition, execution });
-        setHistory(await repo.listExecutions(FLOW_ID));
-      } catch (e) {
-        setRunError(`a execução rodou, mas não entrou no histórico: ${errorMessage(e)}`);
-      }
+      const { record, note } = await backend.run(
+        { name: definition.name, definition, layout },
+        trigger.value,
+      );
+      lastSaved.current = saveKey;
+      setShown({ ...record, definitionKey: stableStringify(record.definition) });
+      if (note) setRunNote(note);
+      setHistory(await backend.listExecutions());
     } catch (e) {
       setRunError(errorMessage(e));
     } finally {
@@ -231,12 +217,12 @@ export function Editor() {
   async function openExecution(id: string) {
     if (load.status !== 'pronto') return;
     try {
-      const saved = await load.repo.getExecution(id);
-      if (!saved) {
-        setRunError('essa execução não existe mais no banco');
+      const record = await load.backend.getExecution(id);
+      if (!record) {
+        setRunError('essa execução não está mais disponível');
         return;
       }
-      setShown({ execution: saved.execution, definitionKey: stableStringify(saved.definition) });
+      setShown({ ...record, definitionKey: stableStringify(record.definition) });
     } catch (e) {
       setRunError(errorMessage(e));
     }
@@ -264,6 +250,11 @@ export function Editor() {
               aria-label="Nome do fluxo"
             />
             <SaveBadge save={save} />
+            {load.status === 'pronto' && (
+              <p className="muted">
+                Modo <strong>{load.backend.mode}</strong> · {load.backend.label}
+              </p>
+            )}
           </header>
 
           <section>
@@ -298,7 +289,7 @@ export function Editor() {
               {running ? 'Executando…' : 'Executar fluxo'}
             </button>
             {runBlocker && !running && <p className="muted">{runBlocker}</p>}
-            {runtimeNote && <p className="muted">{runtimeNote}</p>}
+            {runNote && <p className="muted">{runNote}</p>}
             {runError && <p className="error">{runError}</p>}
           </section>
 
@@ -359,9 +350,9 @@ export function Editor() {
           ) : (
             <div className="canvas-message">
               {load.status === 'carregando' ? (
-                <p className="muted">Abrindo o banco local (Postgres via PGlite)…</p>
+                <p className="muted">Conectando…</p>
               ) : (
-                <p className="error">Não foi possível abrir o banco local: {load.message}</p>
+                <p className="error">Não foi possível iniciar: {load.message}</p>
               )}
             </div>
           )}
@@ -403,7 +394,7 @@ function SaveBadge({ save }: { save: SaveState }) {
     case 'salvando':
       return <p className="muted">salvando…</p>;
     case 'salvo':
-      return <p className="muted">salvo no navegador às {hora(save.at)}</p>;
+      return <p className="muted">salvo às {hora(save.at)}</p>;
     case 'erro':
       return <p className="error">não salvou: {save.message}</p>;
   }

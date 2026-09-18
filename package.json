@@ -9,10 +9,16 @@
   "test:dotnet": "dotnet test dotnet/Relay.Nodes.Tests",
   "test:integration": "pnpm -r --if-present run test:integration",
   "typecheck": "pnpm -r --if-present run typecheck",
+  "measure": "node scripts/measure.mjs",
+  "bench": "node --env-file-if-exists=.env scripts/bench.mjs",
   "infra": "docker compose up -d --build",
+  "stack": "docker compose --profile full up -d --build",
+  "stack:down": "docker compose --profile full down",
+  "stack:migrate": "docker compose --profile tools run --rm migrate",
+  "stack:logs": "docker compose --profile full logs -f api worker",
   "migrate": "pnpm --filter @relay/api migrate",
   "api": "pnpm --filter @relay/api dev",
   "worker": "pnpm --filter @relay/worker dev"
-  },
+},
   "packageManager": "pnpm@11.21.0"
 }
