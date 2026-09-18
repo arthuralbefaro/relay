@@ -58,6 +58,8 @@ services:
       NODE_HOST_URL: http://node-host:8080
       API_PORT: 3001
       API_CORS_ORIGIN: http://localhost:3000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
     ports:
       - "3001:3001"
 

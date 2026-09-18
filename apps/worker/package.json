@@ -12,6 +12,7 @@
     "@relay/db": "workspace:*",
     "@relay/dotnet-host": "workspace:*",
     "@relay/engine": "workspace:*",
+    "@relay/llm": "workspace:*",
     "@relay/nodes": "workspace:*",
     "@relay/queue": "workspace:*",
     "bullmq": "^6.3.6",

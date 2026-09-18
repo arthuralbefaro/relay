@@ -5,6 +5,8 @@ import { loadDatabase } from '@/lib/db';
 import { FLOW_ID, defaultFlow } from '@/lib/default-flow';
 import { dotnetExecutor, loadDotnet } from '@/lib/dotnet';
 import type { ExecutionRecord, ExecutionSummary, FlowBackend, FlowState, RunResult } from '@/lib/backend';
+import { createTsExecutor } from '@relay/nodes';
+import { currentLlmClient } from '@/lib/llm';
 
 export async function createBrowserBackend(): Promise<FlowBackend> {
   const repo: Repository = await loadDatabase();
@@ -41,7 +43,7 @@ export async function createBrowserBackend(): Promise<FlowBackend> {
       }
 
       const execution = await runFlow(state.definition, trigger, {
-        executors: { ts: createTsExecutor(), dotnet: dotnetExecutor },
+        executors: { ts: createTsExecutor({ llm: currentLlmClient() }), dotnet: dotnetExecutor },
       });
 
       await repo.saveExecution({

@@ -77,6 +77,9 @@ importers:
       '@relay/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@relay/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       '@relay/nodes':
         specifier: workspace:*
         version: link:../../packages/nodes
@@ -120,6 +123,9 @@ importers:
       '@relay/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@relay/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       '@relay/nodes':
         specifier: workspace:*
         version: link:../../packages/nodes
@@ -202,15 +208,27 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@22.20.2)(vite@8.3.0(@types/node@22.20.2)(esbuild@0.28.2)(tsx@4.23.13))
 
+  packages/llm:
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@22.20.2)(vite@8.3.0(@types/node@22.20.2)(esbuild@0.28.2)(tsx@4.23.13))
+
   packages/nodes:
     dependencies:
       '@relay/engine':
         specifier: workspace:*
         version: link:../engine
+      '@relay/llm':
+        specifier: workspace:*
+        version: link:../llm
     devDependencies:
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@22.20.2)(vite@8.3.0(@types/node@22.20.2)(esbuild@0.28.2)(tsx@4.23.13))
 
   packages/queue:
     devDependencies:

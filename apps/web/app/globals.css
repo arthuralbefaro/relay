@@ -81,3 +81,5 @@ details summary { cursor: pointer; color: var(--muted); margin-top: 12px; font-s
   .canvas { height: 65vh; }
   .panel, .panel:last-child { border: none; border-top: 1px solid var(--line); }
 }
+
+select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--fg); font: inherit; }

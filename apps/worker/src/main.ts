@@ -7,6 +7,7 @@ import { QUEUE_NAME, redisConnection, type ExecutionJobData } from '@relay/queue
 import { UnrecoverableError, Worker } from 'bullmq';
 import pg from 'pg';
 import { loadEnv } from './env';
+import { createAnthropicClient, type LLMClient } from '@relay/llm';
 
 const env = loadEnv();
 const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: env.WORKER_CONCURRENCY + 2 });
@@ -20,6 +21,10 @@ if (pending.length > 0) {
 
 const repo = createRepository(pgQuery(pool));
 const dotnet = createHttpDotnetExecutor({ baseUrl: env.NODE_HOST_URL, timeoutMs: env.NODE_HOST_TIMEOUT_MS });
+const llm: LLMClient | null = env.ANTHROPIC_API_KEY
+  ? createAnthropicClient({ apiKey: env.ANTHROPIC_API_KEY, ...(env.LLM_MODEL ? { model: env.LLM_MODEL } : {}) })
+  : null;
+console.log(llm ? `provedor de IA: ${llm.label}` : 'provedor de IA: nenhum, nós de IA vão falhar com llm_indisponivel');
 
 const worker = new Worker<ExecutionJobData, { status: string }>(
   QUEUE_NAME,
@@ -30,7 +35,7 @@ const worker = new Worker<ExecutionJobData, { status: string }>(
     if (!flow) throw new UnrecoverableError(`o fluxo '${job.data.flowId}' não existe mais`);
 
     const execution = await runFlow(flow.definition, job.data.trigger, {
-      executors: { ts: createTsExecutor(), dotnet },
+      executors: { ts: createTsExecutor({ llm }), dotnet },
     });
 
     await repo.saveExecution({

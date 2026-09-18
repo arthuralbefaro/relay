@@ -23,6 +23,7 @@ import { CanvasOverlayContext } from './canvas-context';
 import { ExecutionLog } from './ExecutionLog';
 import { Inspector } from './Inspector';
 import RelayNodeView from './RelayNodeView';
+import { LlmPanel } from './LlmPanel';
 
 const nodeTypes = { relay: RelayNodeView };
 const RUNTIMES = ['ts', 'dotnet'] as const;
@@ -274,6 +275,8 @@ export function Editor() {
               ))}
             </div>
           </section>
+
+          <LlmPanel />
 
           <section>
             <h2>Gatilho</h2>
