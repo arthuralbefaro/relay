@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "@relay/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
   }
 }

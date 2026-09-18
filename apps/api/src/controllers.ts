@@ -119,7 +119,7 @@ export class HealthController {
   async check() {
     const [db, redis] = await Promise.all([
       probe(() => this.pool.query('select 1')),
-      probe(async () => (await this.queue.client).ping()),
+      probe(() => this.queue.getJobCounts()),
     ]);
     if (db !== 'ok' || redis !== 'ok') throw new ServiceUnavailableException({ db, redis });
     return { db, redis };

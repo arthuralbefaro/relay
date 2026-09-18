@@ -9,5 +9,9 @@
   "scripts": {
     "test": "vitest run --dir test",
     "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
   }
 }
