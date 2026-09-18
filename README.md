@@ -9,6 +9,10 @@ Some nodes are written in C#. In the browser they run as WebAssembly; on the ser
 assembly runs behind an ASP.NET service. One set of golden fixtures runs against both, so
 the two runtimes cannot drift apart without a test going red.
 
+Other nodes call a language model. The demo answers from recorded text so that it works with
+no key at all, and you can paste your own Anthropic key to see real answers. The key stays in
+your tab and never reaches a Relay server.
+
 Live demo (browser mode, no backend): https://arthuralbefaro.github.io/relay/
 
 ## Why it is built this way
@@ -39,6 +43,10 @@ uppercases the result in TypeScript, and includes a node that fails twice before
 so you can watch the retry policy work. Everything is stored in the browser and survives a
 reload.
 
+The AI nodes in the palette work immediately, answering from recorded text. To get real
+answers, paste an Anthropic API key into the left panel. The key is kept in `sessionStorage`,
+so it disappears when the tab closes, and requests go straight from your browser to the API.
+
 ## Quick start: server mode
 
 Requirements: the above, plus Docker.
@@ -57,6 +65,10 @@ says which mode is active. Flows are stored in Postgres, executions are queued i
 the worker runs them. `pnpm stack:logs` follows the API and worker output; `pnpm stack:down`
 stops everything.
 
+AI nodes on the server read `ANTHROPIC_API_KEY` from the worker's environment. Put it in the
+root `.env` and restart the stack; without it, those nodes fail with `llm_indisponivel` and
+the worker says so at startup.
+
 The API is also usable on its own:
 
 ```bash
@@ -74,6 +86,7 @@ flowchart LR
     EB[engine]
     PG[(PGlite)]
     WASM[C# nodes as WebAssembly]
+    LB[LLM client, user key]
   end
 
   subgraph server[Server build]
@@ -83,6 +96,7 @@ flowchart LR
     ES[engine]
     DB[(Postgres)]
     NH[ASP.NET node host]
+    LS[LLM client, env key]
   end
 
   UI --> EB --> PG
@@ -91,6 +105,8 @@ flowchart LR
   API --> Q --> W --> ES --> NH
   API --> DB
   W --> DB
+  EB --> LB
+  W --> LS
 ```
 
 The engine never knows where it runs. It receives a `NodeExecutor` per runtime and returns a
@@ -110,6 +126,7 @@ worker/ BullMQ consumer that runs flows
 packages/
 engine/ flow execution: ordering, references, retries, logging
 nodes/ node catalog and the TypeScript executor
+llm/ LLM clients: Anthropic, recorded answers, balanced JSON extraction
 db/ schema, migrations, repository, PGlite and Postgres adapters
 dotnet-host/ loads C# nodes over WebAssembly or HTTP
 queue/ queue name, job shape, Redis URL parsing
@@ -137,6 +154,9 @@ the response shape fails in three places at once.
 
 Tests that cannot run fail instead of skipping. A missing WebAssembly build and a passing
 suite must not look the same.
+
+No test reaches the network. The LLM clients take `fetch` as an argument, so provider errors,
+timeouts, and malformed responses are exercised deterministically.
 
 ## Performance
 
@@ -178,6 +198,10 @@ Only manual and webhook triggers exist; there is no scheduler. Flows are single-
 unauthenticated, so the API is meant for local use and not for the public internet. The
 browser build allows one tab at a time, because PGlite owns its IndexedDB storage exclusively
 and a second tab could corrupt it.
+
+Anthropic is the only LLM provider implemented. Adding another means writing one `LLMClient`,
+since no node depends on the provider. Browser requests carry the key from the tab to the API,
+which is fine for a demo you run with your own key and wrong for a product with real users.
 
 ## Contributing
 

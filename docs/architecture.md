@@ -2,13 +2,14 @@
 
 ## Goals
 
-Relay had to do three things at once, and most of its design follows from the tension between
+Relay had to do several things at once, and most of its design follows from the tension between
 them.
 
 It had to be a real distributed system, with a queue, workers, retries, and a database, because
 that is the kind of work the project is meant to demonstrate. It had to be openable by a stranger
-in one click, with no signup and no server to keep alive. And it had to use C# for something that
-actually justifies a second language, rather than as decoration.
+in one click, with no signup and no server to keep alive. It had to use C# for something that
+actually justifies a second language, rather than as decoration. And the AI nodes had to be
+demonstrable by someone who has no API key and is not going to create one.
 
 The resolution: write the execution logic once, with no knowledge of its environment, and give it
 different dependencies in the browser and on the server.
@@ -37,12 +38,15 @@ the queue's time.
 | Storage | PGlite over IndexedDB | Postgres |
 | Queue | none, direct call | Redis and BullMQ |
 | C# nodes | WebAssembly in the tab | ASP.NET service over HTTP |
+| LLM provider | user key in `sessionStorage`, or recorded answers | `ANTHROPIC_API_KEY` in the worker |
 | Editor backend | `FlowBackend` on PGlite | `FlowBackend` on HTTP |
 
-Three interfaces carry the whole difference. `NodeExecutor` runs a node. `QueryFn` is a single
-function, `(sql, params, method) => rows`, that both PGlite and node-postgres satisfy, which lets
-Drizzle's `pg-proxy` driver serve both without a second schema. `FlowBackend` is what the editor
-talks to, so the React tree contains no branch on which mode is active.
+Four interfaces carry the whole difference. `NodeExecutor` runs a node. `LLMClient` answers a
+prompt, and the recorded implementation lets the public demo exercise the AI nodes with no key.
+`QueryFn` is a single function, `(sql, params, method) => rows`, that both PGlite and
+node-postgres satisfy, which lets Drizzle's `pg-proxy` driver serve both without a second schema.
+`FlowBackend` is what the editor talks to, so the React tree contains no branch on which mode is
+active.
 
 Because the SQL is identical on both sides, migrations are identical too. The same migration list
 runs against PGlite in a test and against Postgres in production.
@@ -79,6 +83,24 @@ supplied JavaScript on the server is a sandboxing problem; keeping it declarativ
 expression behaves identically in the tab and on the worker. The plan is to replace the lookup
 with JSONata, which keeps that property.
 
+**Model output is extracted by a balanced scan, not a regular expression.** A greedy `match` on
+`{.*}` swallows the wrong object when the model wraps its JSON in prose, and a lazy one stops at
+the first `}` inside a string. Both failures look identical from the outside: a correct
+classification is discarded as invalid, and the log blames the model for a bug in the parser. The
+extractor walks the text tracking depth, quotes, and escapes, and returns the first complete
+object.
+
+**A classification outside the allowed list becomes `null`, and the rejected value is kept.** The
+node never invents a value the caller did not offer, and never silently hides that the model tried
+to. `fora_da_lista` carries the rejected string, which is the difference between "the model found
+nothing" and "the model answered something we refused".
+
+**Provider errors are split by whether a second attempt could help.** Rate limits, overloads,
+network failures, and 5xx responses are mapped to `falha_interna`, which is one of the two codes
+the engine retries, so the existing backoff handles them with no LLM-specific logic. An invalid
+key or a malformed request keeps its own code and fails once. API keys are stripped from error
+messages before they reach the execution log, which is stored and rendered.
+
 **The lookup table for node types lives in code, but coverage is derived.** The editor's palette,
 the TypeScript executor, and the API's validation all read `NODE_CATALOG`. A node cannot appear in
 the palette without an implementation, because they are the same object.
@@ -111,3 +133,11 @@ truth, at the cost of moving type checking entirely into CI.
 
 PGlite allows a single tab. The app detects the conflict through a Web Lock and says so, rather
 than letting two tabs write to the same IndexedDB store.
+
+Sending the API key from the browser requires a header that Anthropic named to make the risk
+obvious, and the risk is real: any script on the page could read `sessionStorage`. For a demo the
+visitor runs with a key they control, that is an acceptable trade and the alternative is a proxy
+that has to be paid for and kept alive. A product would put the key on the server.
+
+Recorded answers keep the demo honest about what it is. The node reports the recorded text as its
+output and says where it came from, instead of pretending a model was consulted.

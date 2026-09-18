@@ -15,10 +15,10 @@ Local operations for Relay, plus the failures we actually hit while building it.
 ## Starting and stopping
 
 ```bash
-pnpm stack          # build and start the full stack
-pnpm stack:migrate  # apply pending migrations
-pnpm stack:logs     # follow API and worker
-pnpm stack:down     # stop everything, keep the data volume
+pnpm stack     
+pnpm stack:migrate  
+pnpm stack:logs    
+pnpm stack:down   
 ```
 
 The `pgdata` volume survives `stack:down`. To discard the database entirely:
@@ -99,6 +99,29 @@ tab and check which request failed; it is almost always a missing base path pref
 Expected. PGlite owns its IndexedDB store exclusively, so the app holds a Web Lock for the life of
 the tab and refuses the second one. Close the first tab and reload.
 
+### AI nodes fail with llm_indisponivel
+
+No provider is configured. In the browser, paste a key into the left panel; without one, the nodes
+answer from recorded text rather than failing, so this code means the server side. Set
+`ANTHROPIC_API_KEY` in the root `.env` and restart the stack:
+
+```bash
+docker compose --profile full up -d worker
+```
+
+The worker prints its provider at startup, so `docker compose --profile full logs worker | head`
+answers whether it picked up the key.
+
+### AI nodes fail with chave_invalida or resposta_nao_estruturada
+
+`chave_invalida` means the provider rejected the credential, and the node fails on the first
+attempt because retrying would not help. Check the key, and note that keys are redacted from
+execution logs, so the log will not show which one was used.
+
+`resposta_nao_estruturada` means the model answered without a parseable JSON object. The raw text
+is not stored. If it recurs for a given input, the instruction in the node's config is usually the
+thing to tighten.
+
 ### The queue is stuck
 
 Check that the worker is alive and connected:
@@ -121,8 +144,8 @@ is not built yet.
 ## Measuring
 
 ```bash
-pnpm measure                              # asset sizes
-pnpm bench                                # server throughput, needs the stack up
+pnpm measure
+pnpm bench                         
 BENCH_TOTAL=200 BENCH_PARALLEL=20 pnpm bench
 ```
 
